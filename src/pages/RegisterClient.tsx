@@ -1,182 +1,142 @@
 
-import { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useData } from "@/context/DataContext";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  balance: z.string().transform((val) => {
-    const parsed = parseFloat(val);
-    return isNaN(parsed) ? 0 : parsed;
-  }),
-});
+import { useData } from "@/context/DataContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 
 export default function RegisterClient() {
-  const { user } = useAuth();
-  const { registerClient } = useData();
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { registerClient } = useData();
   
-  // Only sales can register new clients
-  if (user?.role !== "sales") return null;
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      address: "",
-      balance: "0",
-    },
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    address: "",
+    balance: 0,
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'balance' ? Number(value) : value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     
-    // Simulate network delay
-    setTimeout(() => {
-      registerClient({
-        ...values,
-        role: "client",
-      });
-      
-      setIsSubmitting(false);
-      toast({
-        title: "Client registered successfully!",
-        description: `${values.name} has been added to your client list.`,
-      });
-      
-      navigate("/clients");
-    }, 1000);
-  }
+    // All required fields must be filled
+    if (!formData.name || !formData.email || !formData.password) {
+      return;
+    }
+
+    registerClient({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      phone: formData.phone,
+      address: formData.address,
+      balance: formData.balance,
+      role: "client",
+    });
+
+    navigate("/clients");
+  };
 
   return (
-    <div className="container mx-auto max-w-md px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Register New Client</h1>
-      
-      <Card>
+    <div className="container mx-auto px-4 py-8">
+      <Card className="mx-auto max-w-lg">
         <CardHeader>
-          <CardTitle>Client Information</CardTitle>
-          <CardDescription>
-            Enter the details of the new client account
-          </CardDescription>
+          <CardTitle>Register New Client</CardTitle>
+          <CardDescription>Create a new client account</CardDescription>
         </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                required
+                id="name"
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Enter client name"
               />
-              
-              <FormField
-                control={form.control}
+            </div>
+            
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1">Email *</label>
+              <Input
+                required
+                type="email"
+                id="email"
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="client@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Enter client email"
               />
-              
-              <FormField
-                control={form.control}
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-1">Password *</label>
+              <Input
+                required
+                type="password"
+                id="password"
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Minimum 6 characters
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Enter password"
               />
-              
-              <FormField
-                control={form.control}
+            </div>
+            
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium mb-1">Phone</label>
+              <Input
+                id="phone"
                 name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1 555-123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="Enter phone number"
               />
-              
-              <FormField
-                control={form.control}
+            </div>
+            
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium mb-1">Address</label>
+              <Input
+                id="address"
                 name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, City, Country" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Enter address"
               />
-              
-              <FormField
-                control={form.control}
+            </div>
+            
+            <div>
+              <label htmlFor="balance" className="block text-sm font-medium mb-1">Initial Balance</label>
+              <Input
+                type="number"
+                id="balance"
                 name="balance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Balance ($)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" min="0" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Starting account balance for the client
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.balance}
+                onChange={handleInputChange}
+                placeholder="Enter initial balance"
               />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Registering..." : "Register Client"}
+            </div>
+            
+            <div className="flex justify-end space-x-4">
+              <Button type="button" variant="outline" onClick={() => navigate("/clients")}>
+                Cancel
               </Button>
-            </CardFooter>
+              <Button type="submit">Register Client</Button>
+            </div>
           </form>
-        </Form>
+        </CardContent>
       </Card>
     </div>
   );
